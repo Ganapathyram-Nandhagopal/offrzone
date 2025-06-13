@@ -12,6 +12,7 @@ class AmazonAffiliateStore {
     this.renderProducts()
     this.updateCartCount()
     this.bindEvents()
+    this.initChatbot()
 
     // Load sample products if none exist
     if (this.products.length === 0) {
@@ -290,6 +291,110 @@ class AmazonAffiliateStore {
 
   saveCart() {
     localStorage.setItem("cart", JSON.stringify(this.cart))
+  }
+
+  // Chatbot functionality
+  initChatbot() {
+    const chatbot = document.getElementById("chatbot")
+    const chatbotTrigger = document.getElementById("chatbotTrigger")
+    const chatbotToggle = document.getElementById("chatbotToggle")
+    const chatbotInput = document.getElementById("chatbotInput")
+    const chatbotSend = document.getElementById("chatbotSend")
+    const chatbotMessages = document.getElementById("chatbotMessages")
+
+    // Toggle chatbot visibility
+    chatbotTrigger.addEventListener("click", () => {
+      chatbot.classList.add("open")
+    })
+
+    chatbotToggle.addEventListener("click", () => {
+      chatbot.classList.remove("open")
+    })
+
+    // Send message
+    const sendMessage = () => {
+      const message = chatbotInput.value.trim()
+      if (!message) return
+
+      // Add user message to chat
+      this.addChatMessage(message, "user")
+      chatbotInput.value = ""
+
+      // Process the message and respond
+      this.processChatbotMessage(message)
+    }
+
+    chatbotSend.addEventListener("click", sendMessage)
+    chatbotInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendMessage()
+    })
+  }
+
+  addChatMessage(message, sender) {
+    const chatbotMessages = document.getElementById("chatbotMessages")
+    const messageElement = document.createElement("div")
+    messageElement.className = `message ${sender}`
+    messageElement.innerHTML = `
+      <div class="message-content">
+        <p>${message}</p>
+      </div>
+    `
+    chatbotMessages.appendChild(messageElement)
+    chatbotMessages.scrollTop = chatbotMessages.scrollHeight
+  }
+
+  processChatbotMessage(message) {
+    // Simple keyword matching for product search
+    const keywords = message.toLowerCase().split(" ")
+    const matchedProducts = this.products.filter((product) => {
+      return keywords.some(
+        (keyword) =>
+          product.name.toLowerCase().includes(keyword) ||
+          product.description.toLowerCase().includes(keyword) ||
+          product.category.toLowerCase().includes(keyword),
+      )
+    })
+
+    setTimeout(() => {
+      if (matchedProducts.length > 0) {
+        this.addChatMessage("I found these products that might interest you:", "bot")
+
+        // Show up to 3 product suggestions
+        const suggestionsToShow = matchedProducts.slice(0, 3)
+
+        suggestionsToShow.forEach((product) => {
+          const amazonUrl = this.buildAmazonUrl(product)
+          const suggestionElement = document.createElement("div")
+          suggestionElement.className = "product-suggestion"
+          suggestionElement.innerHTML = `
+            <div class="suggestion-image">
+              <img src="${product.image}" alt="${product.name}">
+            </div>
+            <div class="suggestion-info">
+              <div class="suggestion-title">${product.name}</div>
+              <div class="suggestion-price">$${product.price}</div>
+              <a href="${amazonUrl}" target="_blank" class="btn btn-secondary btn-small">View on Amazon</a>
+            </div>
+          `
+
+          const chatbotMessages = document.getElementById("chatbotMessages")
+          chatbotMessages.appendChild(suggestionElement)
+          chatbotMessages.scrollTop = chatbotMessages.scrollHeight
+        })
+
+        if (matchedProducts.length > 3) {
+          this.addChatMessage(
+            `Found ${matchedProducts.length - 3} more products. Please refine your search for better results.`,
+            "bot",
+          )
+        }
+      } else {
+        this.addChatMessage(
+          "I couldn't find any products matching your query. Try different keywords or browse our categories.",
+          "bot",
+        )
+      }
+    }, 1000)
   }
 }
 
