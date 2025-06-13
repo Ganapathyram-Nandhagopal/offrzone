@@ -8,6 +8,7 @@ class AdminPanel {
     this.bindEvents()
     this.renderProductsTable()
     this.updatePreview()
+    this.initImageManagement()
   }
 
   bindEvents() {
@@ -287,6 +288,140 @@ class AdminPanel {
     setTimeout(() => {
       message.remove()
     }, 5000)
+  }
+
+  initImageManagement() {
+    // Populate product select dropdown
+    this.updateProductSelect()
+
+    // Bind events for image management
+    const uploadArea = document.getElementById("uploadArea")
+    const imageUpload = document.getElementById("imageUpload")
+    const imageUrl = document.getElementById("imageUrl")
+    const fetchImageBtn = document.getElementById("fetchImageBtn")
+    const saveImageBtn = document.getElementById("saveImageBtn")
+    const productSelect = document.getElementById("productSelect")
+
+    // Handle product selection
+    productSelect.addEventListener("change", () => {
+      const selectedProductId = productSelect.value
+      if (selectedProductId) {
+        const product = this.products.find((p) => p.id === selectedProductId)
+        if (product) {
+          this.showImagePreview(product.image)
+        }
+      } else {
+        this.clearImagePreview()
+      }
+    })
+
+    // Handle upload area click
+    uploadArea.addEventListener("click", () => {
+      imageUpload.click()
+    })
+
+    // Handle drag and drop
+    uploadArea.addEventListener("dragover", (e) => {
+      e.preventDefault()
+      uploadArea.classList.add("active")
+    })
+
+    uploadArea.addEventListener("dragleave", () => {
+      uploadArea.classList.remove("active")
+    })
+
+    uploadArea.addEventListener("drop", (e) => {
+      e.preventDefault()
+      uploadArea.classList.remove("active")
+
+      if (e.dataTransfer.files.length) {
+        const file = e.dataTransfer.files[0]
+        if (file.type.startsWith("image/")) {
+          this.handleImageFile(file)
+        } else {
+          this.showMessage("Please upload an image file", "error")
+        }
+      }
+    })
+
+    // Handle file input change
+    imageUpload.addEventListener("change", (e) => {
+      if (e.target.files.length) {
+        const file = e.target.files[0]
+        this.handleImageFile(file)
+      }
+    })
+
+    // Handle image URL fetch
+    fetchImageBtn.addEventListener("click", () => {
+      const url = imageUrl.value.trim()
+      if (url) {
+        this.showImagePreview(url)
+      } else {
+        this.showMessage("Please enter an image URL", "error")
+      }
+    })
+
+    // Handle save image to product
+    saveImageBtn.addEventListener("click", () => {
+      const selectedProductId = productSelect.value
+      const imagePreview = document.getElementById("imagePreview")
+      const img = imagePreview.querySelector("img")
+
+      if (selectedProductId && img) {
+        const imageSource = img.src
+        this.updateProductImage(selectedProductId, imageSource)
+      } else {
+        this.showMessage("Please select a product and add an image", "error")
+      }
+    })
+  }
+
+  updateProductSelect() {
+    const productSelect = document.getElementById("productSelect")
+    productSelect.innerHTML = '<option value="">Choose a product</option>'
+
+    this.products.forEach((product) => {
+      const option = document.createElement("option")
+      option.value = product.id
+      option.textContent = product.name
+      productSelect.appendChild(option)
+    })
+  }
+
+  handleImageFile(file) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      this.showImagePreview(e.target.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  showImagePreview(src) {
+    const imagePreview = document.getElementById("imagePreview")
+    imagePreview.innerHTML = `<img src="${src}" alt="Preview" onerror="this.src='https://via.placeholder.com/400x300?text=Invalid+Image'">`
+    document.getElementById("saveImageBtn").disabled = false
+  }
+
+  clearImagePreview() {
+    const imagePreview = document.getElementById("imagePreview")
+    imagePreview.innerHTML = `
+      <div class="preview-placeholder">
+        <i class="fas fa-image"></i>
+        <p>Image preview will appear here</p>
+      </div>
+    `
+    document.getElementById("saveImageBtn").disabled = true
+  }
+
+  updateProductImage(productId, imageUrl) {
+    const product = this.products.find((p) => p.id === productId)
+    if (product) {
+      product.image = imageUrl
+      this.saveProducts()
+      this.renderProductsTable()
+      this.showMessage("Product image updated successfully!", "success")
+    }
   }
 }
 
